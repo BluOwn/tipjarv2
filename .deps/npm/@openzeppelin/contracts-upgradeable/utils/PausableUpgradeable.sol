@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (security/Pausable.sol)
+// OpenZeppelin Contracts (last updated v5.3.0) (utils/Pausable.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "../utils/ContextUpgradeable.sol";
+import {ContextUpgradeable} from "../utils/ContextUpgradeable.sol";
 import {Initializable} from "../proxy/utils/Initializable.sol";
 
 /**
@@ -16,6 +16,20 @@ import {Initializable} from "../proxy/utils/Initializable.sol";
  * simply including this module, only once the modifiers are put in place.
  */
 abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
+    /// @custom:storage-location erc7201:openzeppelin.storage.Pausable
+    struct PausableStorage {
+        bool _paused;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Pausable")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant PausableStorageLocation = 0xcd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f03300;
+
+    function _getPausableStorage() private pure returns (PausableStorage storage $) {
+        assembly {
+            $.slot := PausableStorageLocation
+        }
+    }
+
     /**
      * @dev Emitted when the pause is triggered by `account`.
      */
@@ -26,18 +40,15 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
      */
     event Unpaused(address account);
 
-    bool private _paused;
+    /**
+     * @dev The operation failed because the contract is paused.
+     */
+    error EnforcedPause();
 
     /**
-     * @dev Initializes the contract in unpaused state.
+     * @dev The operation failed because the contract is not paused.
      */
-    function __Pausable_init() internal onlyInitializing {
-        __Pausable_init_unchained();
-    }
-
-    function __Pausable_init_unchained() internal onlyInitializing {
-        _paused = false;
-    }
+    error ExpectedPause();
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
@@ -63,25 +74,35 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
         _;
     }
 
+    function __Pausable_init() internal onlyInitializing {
+    }
+
+    function __Pausable_init_unchained() internal onlyInitializing {
+    }
     /**
      * @dev Returns true if the contract is paused, and false otherwise.
      */
     function paused() public view virtual returns (bool) {
-        return _paused;
+        PausableStorage storage $ = _getPausableStorage();
+        return $._paused;
     }
 
     /**
      * @dev Throws if the contract is paused.
      */
     function _requireNotPaused() internal view virtual {
-        require(!paused(), "Pausable: paused");
+        if (paused()) {
+            revert EnforcedPause();
+        }
     }
 
     /**
      * @dev Throws if the contract is not paused.
      */
     function _requirePaused() internal view virtual {
-        require(paused(), "Pausable: not paused");
+        if (!paused()) {
+            revert ExpectedPause();
+        }
     }
 
     /**
@@ -92,7 +113,8 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
      * - The contract must not be paused.
      */
     function _pause() internal virtual whenNotPaused {
-        _paused = true;
+        PausableStorage storage $ = _getPausableStorage();
+        $._paused = true;
         emit Paused(_msgSender());
     }
 
@@ -104,14 +126,8 @@ abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
      * - The contract must be paused.
      */
     function _unpause() internal virtual whenPaused {
-        _paused = false;
+        PausableStorage storage $ = _getPausableStorage();
+        $._paused = false;
         emit Unpaused(_msgSender());
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[49] private __gap;
 }

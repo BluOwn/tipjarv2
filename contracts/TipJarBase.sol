@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./TipJarStructs.sol";
@@ -40,8 +40,8 @@ contract TipJarBase is
     // Track whether an emergency withdrawal was used
     bool public emergencyWithdrawalUsed;
     
-    // Minimum tip amount (0.0001 ETH) to prevent spam
-    uint256 public constant MIN_TIP_AMOUNT = 100000000000000;
+    // Minimum tip amount (0.01 ETH) to prevent spam
+    uint256 public constant MIN_TIP_AMOUNT = 10000000000000000;
     
     // Mappings
     mapping(string => TipJarStructs.JarInfo) public jars;
@@ -237,7 +237,7 @@ contract TipJarBase is
         jarExists(username)
         nonReentrant 
     {
-        require(msg.value > 0, "Tip amount must be greater than 0");
+        require(msg.value >= MIN_TIP_AMOUNT, "Tip amount too small");
         require(bytes(message).length <= MAX_MESSAGE_LENGTH, "Message too long");
         
         uint256 fee = (msg.value * PLATFORM_FEE_BASIS_POINTS) / BASIS_POINTS_DENOMINATOR;
@@ -371,7 +371,7 @@ contract TipJarBase is
     }
 
     // NEW: Get contract version for upgrade tracking
-    function getVersion() public pure returns (string memory) {
+    function getVersion() public pure virtual returns (string memory) {
         return "v1.0.0";
     }
 }
